@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="pt-BR" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bíblia PWA</title>
+    <meta name="description" content="Leitura bíblica offline e devocional diário.">
+    <meta name="theme-color" content="#ffffff">
+    
+    <link rel="manifest" href="/manifest.json">
+    
+    <link rel="icon" type="image/png" href="/assets/icons/icon-192.png">
+
+    <link rel="stylesheet" href="/css/styles.css">
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+
+    <script>
+        (function() {
+            const savedTheme = localStorage.getItem('app_theme');
+            const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+            const theme = savedTheme ? savedTheme : (prefersDark ? 'dark' : 'light');
+            document.documentElement.setAttribute('data-theme', theme);
+        })();
+    </script>
+</head>
+<body>
+    <div id="app">
+        <header class="app-header">
+            <nav class="nav-bar">
+                <button id="btn-home" class="nav-btn" aria-label="Início">Início</button>
+                <button id="btn-bible" class="nav-btn" aria-label="Bíblia">Bíblia</button>
+                <button id="btn-theme" class="nav-btn" aria-label="Alternar Tema">🌗</button>
+            </nav>
+        </header>
+
+        <main id="main-content" class="content-container">
+            <div class="loading-spinner">Carregando...</div>
+        </main>
+    </div>
+
+    <script type="module" src="/src/app.js"></script>
+    
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/sw.js')
+                    .then(reg => console.log('SW registrado:', reg.scope))
+                    .catch(err => console.error('SW falhou:', err));
+            });
+        }
+    </script>
+</body>
+</html>
