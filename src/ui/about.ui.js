@@ -2,15 +2,20 @@ import { shareContent } from '../utils/share.js';
 
 export const AboutUI = {
     render(container) {
-        const appIconUrl = '/assets/icons/icon-512.png'; 
+        // PADRÃO DE COMPARTILHAMENTO
+        // Aqui definimos a imagem e o texto para ficar igual ao "Padrão" que você quer
+        const shareImage = '/assets/icons/icon-512.png'; // A imagem "Capa"
+        const shareTitle = 'Bíblia PWA';
+        const shareText = 'Encontrei este app da Bíblia: simples, offline e focado na leitura. Recomendo!'; 
+        
         // 🟢 SEU PIX AQUI
-        const PIX_KEY = "11999999999"; 
+        const PIX_KEY = "18991442857"; 
 
         const html = `
             <div class="card" style="text-align: center; padding: 2rem 1rem;">
-                <img src="${appIconUrl}" alt="Bíblia PWA" style="width: 80px; height: 80px; border-radius: 20px; margin-bottom: 1rem; box-shadow: var(--shadow);">
+                <img src="${shareImage}" alt="Bíblia PWA" style="width: 80px; height: 80px; border-radius: 20px; margin-bottom: 1rem; box-shadow: var(--shadow);">
                 
-                <h2 style="margin-bottom: 0.5rem;">Bíblia PWA</h2>
+                <h2 style="margin-bottom: 0.5rem;">${shareTitle}</h2>
                 <p style="color: var(--text-muted); margin-bottom: 2rem;">Versão 1.0.0</p>
 
                 <p style="margin-bottom: 1.5rem; line-height: 1.8;">
@@ -46,16 +51,12 @@ export const AboutUI = {
             </div>
         `;
 
-        // 1. INJETA O HTML NA TELA (Obrigatório fazer isso antes de pegar os IDs)
         container.innerHTML = html;
 
-        // ============================================================
-        // LÓGICA DE INSTALAÇÃO (Versão Reativa - Corrige o Bug de sumir)
-        // ============================================================
+        // --- LÓGICA DE INSTALAÇÃO REATIVA ---
         const btnInstall = document.getElementById('btn-install');
         const iosHint = document.getElementById('ios-hint');
         
-        // Função auxiliar para mostrar o botão
         const showInstallButton = () => {
             if (window.deferredPrompt) {
                 btnInstall.style.display = 'flex';
@@ -63,53 +64,39 @@ export const AboutUI = {
             }
         };
 
-        // Tenta mostrar agora (se já estiver pronto)
         showInstallButton();
-
-        // Fica ouvindo se ficar pronto depois (Reatividade)
         window.addEventListener('app-ready-to-install', showInstallButton);
 
-        // Clique do Botão Instalar
         btnInstall.addEventListener('click', async () => {
             const promptEvent = window.deferredPrompt;
             if (!promptEvent) return;
-            
             promptEvent.prompt(); 
             const result = await promptEvent.userChoice;
-            console.log('Escolha:', result.outcome);
-            
             window.deferredPrompt = null;
             btnInstall.style.display = 'none';
         });
 
-        // Dica iOS
         const isIOS = /iPhone|iPad|iPod/.test(navigator.userAgent);
         if (isIOS && !window.deferredPrompt) {
             iosHint.style.display = 'block';
         }
 
-        // ============================================================
-        // OUTROS EVENTOS (Compartilhar, Voltar, Pix)
-        // ============================================================
+        // --- OUTROS EVENTOS ---
+        document.getElementById('btn-back-home').addEventListener('click', () => window.location.hash = 'home');
 
-        // Voltar
-        document.getElementById('btn-back-home').addEventListener('click', () => {
-            window.location.hash = 'home';
-        });
-
-        // Compartilhar App
+        // LÓGICA DO BOTÃO COMPARTILHAR (SEM LINK AZUL)
         document.getElementById('btn-share-app').addEventListener('click', async () => {
             const btn = document.getElementById('btn-share-app');
             const originalText = btn.innerHTML;
-            btn.innerHTML = 'Gerando card...';
+            btn.innerHTML = 'Enviando Imagem...';
             
-            const inviteText = `Baixe agora a Bíblia PWA: leitura offline e versículo do dia!\n\nSimples e sem anúncios.`;
-            await shareContent('Bíblia PWA', inviteText, appIconUrl);
+            // Aqui chamamos a função que envia ARQUIVO FÍSICO
+            // Resultado: Imagem Grande + Legenda, sem link azul clicável.
+            await shareContent(shareTitle, shareText, shareImage);
             
             btn.innerHTML = originalText;
         });
 
-        // Copiar PIX
         document.getElementById('btn-pix').addEventListener('click', () => {
             const btn = document.getElementById('btn-pix');
             navigator.clipboard.writeText(PIX_KEY).then(() => {
