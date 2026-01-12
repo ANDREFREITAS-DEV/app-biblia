@@ -6,10 +6,9 @@ export const HomeUI = {
         container.innerHTML = '<div class="loading-spinner">Buscando inspiração...</div>';
         
         try {
-            // Busca o versículo aleatório
             const daily = await DailyAPI.getDailyVerse();
             
-            // Define imagem. Se não tiver no banco, usa uma de paisagem genérica
+            // Define imagem (Supabase ou Fallback)
             const imgUrl = daily.image_url 
                 ? daily.image_url 
                 : 'https://images.unsplash.com/photo-1507692049790-de58293a469d?w=800&q=80';
@@ -27,7 +26,7 @@ export const HomeUI = {
                     
                     <div class="action-bar" style="justify-content: center; margin-top: 1.5rem;">
                         <button id="btn-share-daily" class="btn-primary" style="display: flex; align-items: center; gap: 8px;">
-                            <span style="font-size: 1.2rem;">📤</span> Compartilhar
+                            <span style="font-size: 1.2rem;">📤</span> Compartilhar Imagem
                         </button>
                         <button id="btn-reload" class="btn-outline" aria-label="Nova Mensagem">
                             ↻ Outra
@@ -45,21 +44,21 @@ export const HomeUI = {
 
             container.innerHTML = html;
 
-            // Evento: Compartilhar
+            // --- EVENTO DE COMPARTILHAR ---
             document.getElementById('btn-share-daily').addEventListener('click', async () => {
                 const btn = document.getElementById('btn-share-daily');
                 const originalText = btn.innerHTML;
-                btn.textContent = 'Enviando...';
+                btn.textContent = 'Baixando e Enviando...';
                 
-                // Texto bonito para o zap
-                const shareText = `"${daily.text}"\n— ${daily.reference}\n\nCompartilhado via Bíblia App`;
+                // OBSERVAÇÃO: Aqui removemos qualquer URL do texto para evitar link azul
+                const shareText = `"${daily.text}"\n— ${daily.reference}`;
                 
+                // Enviamos (Título, Texto Limpo, URL da Imagem para download)
                 await shareContent('Versículo do Dia', shareText, imgUrl);
                 
                 btn.innerHTML = originalText;
             });
 
-            // Evento: Carregar outro (Aleatório)
             document.getElementById('btn-reload').addEventListener('click', () => {
                 this.render(container);
             });

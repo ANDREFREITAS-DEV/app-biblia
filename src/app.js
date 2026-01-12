@@ -1,12 +1,13 @@
 import { HomeUI } from './ui/home.ui.js';
 import { BibleUI } from './ui/bible.ui.js';
-
+import { AboutUI } from './ui/about.ui.js'; // <--- Adicione isso
 class App {
     constructor() {
         this.mainContent = document.getElementById('main-content');
         this.initTheme();
         this.initRouter();
         this.bindEvents();
+        this.initInstallPrompt(); // <--- NOVO
     }
 
     // Gerenciamento de Tema
@@ -46,6 +47,10 @@ class App {
                 break;
             default:
                 HomeUI.render(this.mainContent);
+            case 'about': // <--- Adicione isso
+                AboutUI.render(this.mainContent);
+                break;
+
         }
 
         this.updateNav(hash);
@@ -61,13 +66,29 @@ class App {
         // Navegação
         document.getElementById('btn-home').addEventListener('click', () => window.location.hash = 'home');
         document.getElementById('btn-bible').addEventListener('click', () => window.location.hash = 'bible');
+        document.getElementById('btn-about').addEventListener('click', () => window.location.hash = 'about');
         
         // Tema
         document.getElementById('btn-theme').addEventListener('click', () => this.toggleTheme());
     }
+
+    // --- NOVA FUNÇÃO DE INSTALAÇÃO ---
+    initInstallPrompt() {
+        window.deferredPrompt = null;
+
+        window.addEventListener('beforeinstallprompt', (e) => {
+            // 1. Impede o banner automático
+            e.preventDefault();
+            // 2. Guarda o evento
+            window.deferredPrompt = e;
+            console.log('App pronto para instalar!');
+
+            // 3. NOVO: Avisa todas as telas que o botão já pode aparecer
+            window.dispatchEvent(new Event('app-ready-to-install'));
+        });
+    }
 }
 
-// Inicializa o App quando o DOM estiver pronto
 document.addEventListener('DOMContentLoaded', () => {
     new App();
 });
