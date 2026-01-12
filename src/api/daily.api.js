@@ -1,51 +1,85 @@
 import { SUPABASE_URL, SUPABASE_ANON_KEY } from '../config.js';
+import { BibleAPI } from './bible.api.js';
 
 const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 export const DailyAPI = {
     async getDailyVerse() {
-        const today = new Date().toISOString().split('T')[0];
-
-        // 1. Busca a referência do dia
-        const { data: refData, error: refError } = await supabase
+        // 1. Busca TODOS os versículos curados da tabela 'versiculo_do_dia'
+        // Como são apenas algumas centenas, é muito rápido e barato baixar tudo.
+        const { data: versesList, error } = await supabase
             .from('versiculo_do_dia')
-            .select('*')
-            // Tenta pegar o de hoje, ou o último cadastrado se não houver hoje
-            .order('data', { ascending: false }) 
-            .limit(1)
-            .single();
+            .select('*');
 
-        if (refError || !refData) {
-             // Fallback local se não houver dados no banco
+        if (error || !versesList || versesList.length === 0) {
+             console.error("Erro ou lista vazia:", error);
+             // Fallback local caso a internet falhe ou banco esteja vazio
              return {
-                 text: "Lâmpada para os meus pés é a tua palavra e luz para o meu caminho.",
-                 reference: "Salmos 119:105",
+                 text: "O Senhor é o meu pastor, nada me faltará.",
+                 reference: "Salmos 23:1",
                  image_url: null 
              };
         }
 
-        // 2. Busca o texto do versículo na tabela principal
-        const { data: verseData, error: verseError } = await supabase
+        // 2. Sorteia UM versículo aleatório da lista
+        const randomIndex = Math.floor(Math.random() * versesList.length);
+        const randomVerse = versesList[randomIndex];
+
+        // 3. Busca o TEXTO completo na tabela de bíblia (pois versiculo_do_dia só tem a referência)
+        // Precisamos traduzir o nome do livro se ele estiver abreviado na tabela do dia
+        // Mas pelo seu CSV, parece que na tabela do dia está "Hebreus" (bonito), e na biblia está "Hb" (sigla).
+        // Vamos tentar buscar direto. Se falhar, tentamos converter.
+        
+        let textData = null;
+        
+        // Tentativa 1: Busca direta (Assumindo que o nome do livro bate)
+        const { data: v1 } = await supabase
             .from('biblia_versiculos')
             .select('texto')
-            .eq('livro', refData.livro)
-            .eq('capitulo', refData.capitulo)
-            .eq('versiculo', refData.versiculo)
+            .eq('livro', randomVerse.livro) // Tenta "Hebreus"
+            .eq('capitulo', randomVerse.capitulo)
+            .eq('versiculo', randomVerse.versiculo)
             .single();
+            
+        textData = v1;
 
-        const text = verseData ? verseData.texto : "Texto indisponível.";
-        const reference = `${refData.livro} ${refData.capitulo}:${refData.versiculo}`;
+        // Tentativa 2: Se falhou, pode ser que 'Hebreus' precise virar 'Hb'
+        if (!textData) {
+            // Procura a SIGLA baseada no nome
+            const bookMap = await BibleAPI.getBooks(); 
+            const foundBook = bookMap.find(b => b.name === randomVerse.livro);
+            
+            if (foundBook) {
+                const { data: v2 } = await supabase
+                    .from('biblia_versiculos')
+                    .select('texto')
+                    .eq('livro', foundBook.id) // Usa a sigla "Hb"
+                    .eq('capitulo', randomVerse.capitulo)
+                    .eq('versiculo', randomVerse.versiculo)
+                    .single();
+                textData = v2;
+            }
+        }
 
+        const finalText = textData ? textData.texto : "Texto não encontrado no banco.";
+        
         return {
-            text: text,
-            reference: reference,
-            image_url: refData.image_path // Caminho para usar no Storage
+            text: finalText,
+            reference: `${randomVerse.livro} ${randomVerse.capitulo}:${randomVerse.versiculo}`,
+            // Monta a URL da imagem. 
+            // IMPORTANTE: Substitua 'daily-images' pelo nome real do seu bucket se for diferente.
+            image_url: DailyAPI.getDailyImageURL(randomVerse.image_path)
         };
     },
 
     getDailyImageURL(path) {
         if (!path) return null;
-        // Ajuste 'daily-images' para o nome correto do seu bucket no Supabase, se for diferente
-        return supabase.storage.from('daily-images').getPublicUrl(path).data.publicUrl;
+        // Se o path já vier completo (http...), retorna ele. Se não, monta.
+        if (path.startsWith('http')) return path;
+        
+        // ATENÇÃO: Confirme se o nome do seu bucket no Storage é 'daily-images'
+        // Se você criou uma pasta 'faith' dentro de um bucket chamado 'imagens', mude aqui.
+        // Vou assumir que o bucket se chama 'daily-images' baseado no nosso papo anterior.
+        return supabase.storage.from('bible-cards').getPublicUrl(path).data.publicUrl;
     }
 };
